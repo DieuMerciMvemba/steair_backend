@@ -1,0 +1,21 @@
+# Compiled output
+/dist
+/node_modules
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Runtime data
+prisma/dev.db
+prisma/dev.db-journal
+
+# IDE / OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Environments
+.env
