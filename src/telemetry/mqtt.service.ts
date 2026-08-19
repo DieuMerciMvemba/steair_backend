@@ -1,7 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as mqtt from 'mqtt';
-import * as Aedes from 'aedes';
 import * as net from 'net';
 
 @Injectable()
@@ -14,7 +13,7 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
 
   constructor(private prisma: PrismaService) {}
 
-  onModuleInit() {
+  async onModuleInit() {
     if (process.env.DISABLE_MQTT_CLIENT === 'true') {
       this.logger.log('Client MQTT désactivé pour cet environnement Serverless (Vercel). Webhook actif.');
       return;
@@ -24,7 +23,11 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
 
     if (useEmbedded) {
       this.logger.log('Démarrage du Broker MQTT EMBEDDED (Aedes)...');
-      this.aedesInstance = (Aedes as any)();
+
+      // Import dynamique pour éviter ERR_REQUIRE_ESM sur les environnements Serverless
+      const AedesModule = await import('aedes');
+      const AedesFactory = AedesModule.default || AedesModule;
+      this.aedesInstance = (AedesFactory as any)();
       this.tcpServer = net.createServer(this.aedesInstance.handle);
 
       const port = 1883;
@@ -47,6 +50,7 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
 
       this.client = mqtt.connect(brokerUrl, {
         reconnectPeriod: 5000,
+        rejectUnauthorized: false,
       });
 
       this.client.on('connect', () => {
