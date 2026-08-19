@@ -1,47 +1,74 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as mqtt from 'mqtt';
+import * as Aedes from 'aedes';
+import * as net from 'net';
 
 @Injectable()
 export class MqttService implements OnModuleInit, OnModuleDestroy {
   private client: mqtt.MqttClient;
+  private aedesInstance: any;
+  private tcpServer: net.Server;
   private readonly logger = new Logger('MqttTelemetryService');
   private readonly topic = 'kongo-clim/telemetry';
 
   constructor(private prisma: PrismaService) {}
 
   onModuleInit() {
-    const brokerUrl = process.env.MQTT_BROKER_URL || 'mqtt://broker.emqx.io:1883';
-    this.logger.log(`Connexion au Broker MQTT : ${brokerUrl}...`);
+    const useEmbedded = process.env.USE_EMBEDDED_BROKER === 'true';
 
-    this.client = mqtt.connect(brokerUrl, {
-      reconnectPeriod: 5000, // Reconnexion automatique toutes les 5s
-    });
+    if (useEmbedded) {
+      this.logger.log('Démarrage du Broker MQTT EMBEDDED (Aedes)...');
+      this.aedesInstance = (Aedes as any)();
+      this.tcpServer = net.createServer(this.aedesInstance.handle);
 
-    this.client.on('connect', () => {
-      this.logger.log(`Connecté avec succès au Broker MQTT !`);
-      this.client.subscribe(this.topic, (err) => {
-        if (err) {
-          this.logger.error(`Échec d'abonnement au topic ${this.topic}`, err.message);
-        } else {
-          this.logger.log(`Abonné avec succès au topic : "${this.topic}"`);
+      const port = 1883;
+      this.tcpServer.listen(port, () => {
+        this.logger.log(`Broker MQTT intégré actif et à l'écoute sur le port TCP ${port} !`);
+      });
+
+      this.aedesInstance.on('publish', async (packet, client) => {
+        if (packet.topic === this.topic) {
+          await this.handleIncomingMessage(packet.payload.toString());
         }
       });
-    });
 
-    this.client.on('message', async (topic, message) => {
-      if (topic === this.topic) {
-        await this.handleIncomingMessage(message.toString());
-      }
-    });
+      this.aedesInstance.on('clientError', (client, err) => {
+        this.logger.error(`Erreur client sur le Broker intégré : ${err.message}`);
+      });
+    } else {
+      const brokerUrl = process.env.MQTT_BROKER_URL || 'mqtt://broker.emqx.io:1883';
+      this.logger.log(`Connexion au Broker MQTT EXTERNE : ${brokerUrl}...`);
 
-    this.client.on('error', (err) => {
-      this.logger.error(`Erreur du client MQTT`, err.message);
-    });
+      this.client = mqtt.connect(brokerUrl, {
+        reconnectPeriod: 5000,
+      });
 
-    this.client.on('close', () => {
-      this.logger.warn(`Déconnexion du Broker MQTT.`);
-    });
+      this.client.on('connect', () => {
+        this.logger.log(`Connecté avec succès au Broker MQTT !`);
+        this.client.subscribe(this.topic, (err) => {
+          if (err) {
+            this.logger.error(`Échec d'abonnement au topic ${this.topic}`, err.message);
+          } else {
+            this.logger.log(`Abonné avec succès au topic : "${this.topic}"`);
+          }
+        });
+      });
+
+      this.client.on('message', async (topic, message) => {
+        if (topic === this.topic) {
+          await this.handleIncomingMessage(message.toString());
+        }
+      });
+
+      this.client.on('error', (err) => {
+        this.logger.error(`Erreur du client MQTT`, err.message);
+      });
+
+      this.client.on('close', () => {
+        this.logger.warn(`Déconnexion du Broker MQTT.`);
+      });
+    }
   }
 
   private async handleIncomingMessage(payload: string) {
@@ -91,6 +118,13 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
     if (this.client) {
       this.client.end();
       this.logger.log(`Fermeture de la connexion du client MQTT.`);
+    }
+    if (this.tcpServer) {
+      this.tcpServer.close();
+      this.logger.log(`Fermeture du serveur TCP MQTT intégré.`);
+    }
+    if (this.aedesInstance) {
+      this.aedesInstance.close();
     }
   }
 }
