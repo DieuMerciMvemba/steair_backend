@@ -15,6 +15,11 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
   constructor(private prisma: PrismaService) {}
 
   onModuleInit() {
+    if (process.env.DISABLE_MQTT_CLIENT === 'true') {
+      this.logger.log('Client MQTT désactivé pour cet environnement Serverless (Vercel). Webhook actif.');
+      return;
+    }
+
     const useEmbedded = process.env.USE_EMBEDDED_BROKER === 'true';
 
     if (useEmbedded) {
