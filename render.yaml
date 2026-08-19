@@ -1,0 +1,27 @@
+services:
+  # 1. Base de données PostgreSQL de Production
+  - type: db
+    name: kongoclim-db
+    plan: free # Version gratuite pour votre présentation
+    databaseName: kongoclim
+    user: mvemba
+
+  # 2. Service Web pour le Backend NestJS
+  - type: web
+    name: kongoclim-backend
+    plan: free
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:prod
+    # Note : Pas besoin de rootDir ici car ce fichier est situé à la racine du dépôt backend
+    envVars:
+      - key: DATABASE_URL
+        fromValue: ${kongoclim-db.connectionString}
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_API_KEY
+        value: steair_admin_super_secret_key_2026
+      - key: FRONTEND_URL
+        value: https://steair-frontend.vercel.app # Remplacez par votre URL Vercel réelle
+      - key: MQTT_BROKER_URL
+        value: mqtt://broker.emqx.io:1883
