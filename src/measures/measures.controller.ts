@@ -5,6 +5,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 
 @Controller('api')
+@UseGuards(JwtAuthGuard)
 export class MeasuresController {
   constructor(private prisma: PrismaService) {}
 

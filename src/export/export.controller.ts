@@ -1,9 +1,11 @@
-import { Controller, Get, Res, InternalServerErrorException } from '@nestjs/common';
+import { Controller, Get, Res, InternalServerErrorException, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
 import * as XLSX from 'xlsx';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('api/export')
+@UseGuards(JwtAuthGuard)
 export class ExportController {
   constructor(private prisma: PrismaService) {}
 
