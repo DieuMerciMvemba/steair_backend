@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { PrismaService } from './prisma/prisma.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -54,10 +55,26 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  // Redirection automatique de la racine (/) vers la documentation (/api/docs)
+  // Route de santé (Health Check) à la racine (/)
   const expressApp = app.getHttpAdapter().getInstance();
-  expressApp.get('/', (req: any, res: any) => {
-    res.redirect('/api/docs');
+  const prisma = app.get(PrismaService);
+
+  expressApp.get('/', async (req: any, res: any) => {
+    let dbStatus = 'ok';
+    try {
+      // Exécuter une requête simple pour s'assurer que la base répond
+      await prisma.$queryRaw`SELECT 1`;
+    } catch (err) {
+      dbStatus = 'down';
+    }
+
+    res.status(dbStatus === 'ok' ? 200 : 500).json({
+      status: dbStatus === 'ok' ? 'healthy' : 'unhealthy',
+      service: 'steair-backend-api',
+      timestamp: new Date().toISOString(),
+      database: dbStatus,
+      documentation: '/api/docs'
+    });
   });
 
   const port = process.env.PORT || 3000;
