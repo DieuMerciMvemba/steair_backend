@@ -53,7 +53,17 @@ async function bootstrap() {
     .build();
   
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+
+  // Options personnalisées pour assurer le chargement des fichiers statiques Swagger sur Vercel via CDN
+  const swaggerOptions = {
+    customCssUrl: 'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui.min.css',
+    customJs: [
+      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui-bundle.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui-standalone-preset.js',
+    ],
+  };
+
+  SwaggerModule.setup('api/docs', app, document, swaggerOptions);
 
   // Route de santé (Health Check) à la racine (/)
   const expressApp = app.getHttpAdapter().getInstance();
