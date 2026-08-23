@@ -29,6 +29,8 @@ model Measure {
   batteryVoltage Float?
   gsmSignal      Int?
   gsmOperator    String?
+  temperatureBmp Float?
+  temperatureDht Float?
   lbsLat         Float?
   lbsLon         Float?
 }

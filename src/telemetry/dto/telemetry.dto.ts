@@ -6,6 +6,14 @@ export class TelemetryDto {
   temperature: number;
 
   @IsNumber()
+  @IsOptional()
+  temperature_bmp?: number;
+
+  @IsNumber()
+  @IsOptional()
+  temperature_dht?: number;
+
+  @IsNumber()
   @IsNotEmpty()
   humidity: number;
 

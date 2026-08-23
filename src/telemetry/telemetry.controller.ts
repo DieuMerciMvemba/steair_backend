@@ -32,6 +32,8 @@ export class TelemetryController {
           batteryVoltage: dto.battery_voltage ? parseFloat(dto.battery_voltage.toString()) : null,
           gsmSignal: dto.gsm_signal !== undefined ? parseInt(dto.gsm_signal.toString()) : null,
           gsmOperator: dto.gsm_operator || null,
+          temperatureBmp: dto.temperature_bmp !== undefined ? parseFloat(dto.temperature_bmp.toString()) : null,
+          temperatureDht: dto.temperature_dht !== undefined ? parseFloat(dto.temperature_dht.toString()) : null,
           lbsLat: dto.lbs_lat ? parseFloat(dto.lbs_lat.toString()) : null,
           lbsLon: dto.lbs_lon ? parseFloat(dto.lbs_lon.toString()) : null,
         },
