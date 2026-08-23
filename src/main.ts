@@ -9,6 +9,11 @@ import { PrismaService } from './prisma/prisma.service';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Activer "trust proxy" pour autoriser express-rate-limit à identifier correctement
+  // les clients finaux derrière les reverse proxies de Vercel/Render (via X-Forwarded-For).
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.set('trust proxy', 1);
+
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
   // Configuration Sécurité
@@ -66,7 +71,6 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document, swaggerOptions);
 
   // Route de santé (Health Check) à la racine (/)
-  const expressApp = app.getHttpAdapter().getInstance();
   const prisma = app.get(PrismaService);
 
   expressApp.get('/', async (req: any, res: any) => {
