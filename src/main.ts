@@ -52,7 +52,7 @@ export const createServer = async (expressInstance) => {
   await app.init();
 };
 
-// Mode Standard persistant (Local / Render)
+// Mode Standard persistant (Local)
 if (!process.env.VERCEL) {
   const port = process.env.PORT || 3000;
   NestFactory.create(AppModule).then(async (app) => {
