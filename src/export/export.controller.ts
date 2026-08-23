@@ -1,4 +1,4 @@
-import { Controller, Get, Res, InternalServerErrorException, UseGuards } from '@nestjs/common';
+import { Controller, Get, Res, InternalServerErrorException, UseGuards, Query } from '@nestjs/common';
 import { Response } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
 import * as XLSX from 'xlsx';
@@ -50,9 +50,14 @@ export class ExportController {
   }
 
   @Get('json')
-  async exportJson(@Res() res: Response) {
+  async exportJson(@Res() res: Response, @Query('stationId') stationId?: string) {
     try {
+      const where: any = {};
+      if (stationId) {
+        where.stationId = stationId;
+      }
       const raw = await this.prisma.measure.findMany({
+        where,
         orderBy: { timestamp: 'desc' },
       });
       const rows = raw.map((r) => this.enrichRow(r));
@@ -91,9 +96,14 @@ export class ExportController {
   }
 
   @Get('excel')
-  async exportExcel(@Res() res: Response) {
+  async exportExcel(@Res() res: Response, @Query('stationId') stationId?: string) {
     try {
+      const where: any = {};
+      if (stationId) {
+        where.stationId = stationId;
+      }
       const raw = await this.prisma.measure.findMany({
+        where,
         orderBy: { timestamp: 'desc' },
       });
       const rows = raw.map((r) => this.enrichRow(r));

@@ -18,6 +18,24 @@ model User {
   updatedAt DateTime @updatedAt
 }
 
+model Station {
+  id           String        @id @default(uuid())
+  code         String        @unique // ex: "STATION-001"
+  name         String        // ex: "Station Météo Kinshasa"
+  location     String        // ex: "Kinshasa / Gombe"
+  latitude     Float?
+  longitude    Float?
+  status       String        @default("OFFLINE") // "ONLINE" | "DEGRADED" | "OFFLINE" | "MAINTENANCE"
+  apiKey       String        @unique // clé d'authentification propre au boîtier
+  lastSeen     DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  
+  measures     Measure[]
+  alerts       Alert[]
+  maintenances Maintenance[]
+}
+
 model Measure {
   id             String   @id @default(uuid())
   timestamp      DateTime @default(now())
@@ -33,4 +51,34 @@ model Measure {
   temperatureDht Float?
   lbsLat         Float?
   lbsLon         Float?
+
+  stationId      String?
+  station        Station? @relation(fields: [stationId], references: [id], onDelete: Cascade)
+}
+
+model Alert {
+  id          String    @id @default(uuid())
+  type        String    // "ENVIRONMENTAL" | "TECHNICAL"
+  title       String    // ex: "Batterie Faible", "Vigilance Température"
+  message     String
+  severity    String    // "INFO" | "WARNING" | "CRITICAL"
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  resolvedAt  DateTime?
+
+  stationId   String
+  station     Station   @relation(fields: [stationId], references: [id], onDelete: Cascade)
+}
+
+model Maintenance {
+  id             String   @id @default(uuid())
+  technicianName String
+  description    String
+  action         String
+  result         String
+  status         String   // "PENDING" | "RESOLVED"
+  createdAt      DateTime @default(now())
+
+  stationId      String
+  station        Station  @relation(fields: [stationId], references: [id], onDelete: Cascade)
 }

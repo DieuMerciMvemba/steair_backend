@@ -11,8 +11,13 @@ export class MeasuresController {
 
   // GET /api/realtime
   @Get('realtime')
-  async getRealtime() {
+  async getRealtime(@Query('stationId') stationId?: string) {
+    const where: any = {};
+    if (stationId) {
+      where.stationId = stationId;
+    }
     const measure = await this.prisma.measure.findFirst({
+      where,
       orderBy: { timestamp: 'desc' },
     });
     if (!measure) {
@@ -24,6 +29,7 @@ export class MeasuresController {
   // GET /api/history
   @Get('history')
   async getHistory(
+    @Query('stationId') stationId?: string,
     @Query('limit') limitQuery?: string,
     @Query('offset') offsetQuery?: string,
     @Query('start') start?: string,
@@ -39,6 +45,10 @@ export class MeasuresController {
     const alertOnly = alertOnlyQuery === 'true' || alertOnlyQuery === '1';
 
     const where: any = {};
+
+    if (stationId) {
+      where.stationId = stationId;
+    }
 
     if (start || end) {
       where.timestamp = {};
@@ -78,14 +88,21 @@ export class MeasuresController {
 
   // GET /api/stats
   @Get('stats')
-  async getStats() {
-    const total = await this.prisma.measure.count();
+  async getStats(@Query('stationId') stationId?: string) {
+    const where: any = {};
+    if (stationId) {
+      where.stationId = stationId;
+    }
+
+    const total = await this.prisma.measure.count({ where });
     const lastMeasure = await this.prisma.measure.findFirst({
+      where,
       orderBy: { timestamp: 'desc' },
     });
 
     // Calculer les statistiques globales
     const rawMeasures = await this.prisma.measure.findMany({
+      where,
       take: 1000, // Limiter pour les stats rapides
       orderBy: { timestamp: 'desc' },
     });
