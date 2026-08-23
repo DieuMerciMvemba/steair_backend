@@ -47,7 +47,11 @@ export class MeasuresController {
     const where: any = {};
 
     if (stationId) {
-      where.stationId = stationId;
+      if (stationId.includes(',')) {
+        where.stationId = { in: stationId.split(',') };
+      } else {
+        where.stationId = stationId;
+      }
     }
 
     if (start || end) {
@@ -91,7 +95,11 @@ export class MeasuresController {
   async getStats(@Query('stationId') stationId?: string) {
     const where: any = {};
     if (stationId) {
-      where.stationId = stationId;
+      if (stationId.includes(',')) {
+        where.stationId = { in: stationId.split(',') };
+      } else {
+        where.stationId = stationId;
+      }
     }
 
     const total = await this.prisma.measure.count({ where });

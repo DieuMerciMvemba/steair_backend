@@ -54,7 +54,11 @@ export class ExportController {
     try {
       const where: any = {};
       if (stationId) {
-        where.stationId = stationId;
+        if (stationId.includes(',')) {
+          where.stationId = { in: stationId.split(',') };
+        } else {
+          where.stationId = stationId;
+        }
       }
       const raw = await this.prisma.measure.findMany({
         where,
@@ -100,7 +104,11 @@ export class ExportController {
     try {
       const where: any = {};
       if (stationId) {
-        where.stationId = stationId;
+        if (stationId.includes(',')) {
+          where.stationId = { in: stationId.split(',') };
+        } else {
+          where.stationId = stationId;
+        }
       }
       const raw = await this.prisma.measure.findMany({
         where,

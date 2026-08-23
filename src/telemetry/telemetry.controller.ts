@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Headers, UnauthorizedException, BadRequestException, HttpCode, HttpStatus, Logger } from '@nestjs/common';
+import { Controller, Post, Body, Headers, UnauthorizedException, ForbiddenException, BadRequestException, HttpCode, HttpStatus, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AlertsService } from '../alerts/alerts.service';
 import { TelemetryDto } from './dto/telemetry.dto';
@@ -37,8 +37,20 @@ export class TelemetryController {
       throw new UnauthorizedException('Clé d\'API invalide');
     }
 
+    if (!station.active) {
+      this.logger.warn(`[TÉLÉMÉTRIE HTTP] Rejet : la station ${station.code} est désactivée`);
+      throw new ForbiddenException('Station désactivée');
+    }
+
     try {
-      const isAlert = dto.rain === 1;
+      // Lire les seuils critiques depuis les paramètres configurés en base de données (Setting)
+      const tempThresholdCriticalStr = await this.prisma.setting.findUnique({ where: { key: 'temp_threshold_critical_high' } });
+      const batteryThresholdCriticalStr = await this.prisma.setting.findUnique({ where: { key: 'battery_threshold_critical_low' } });
+
+      const tempThresholdCritical = tempThresholdCriticalStr ? parseFloat(tempThresholdCriticalStr.value) : 40.0;
+      const batteryThresholdCritical = batteryThresholdCriticalStr ? parseFloat(batteryThresholdCriticalStr.value) : 3.4;
+
+      const isAlert = dto.rain === 1 || dto.temperature > tempThresholdCritical || (dto.battery_voltage != null && dto.battery_voltage < batteryThresholdCritical);
 
       // 1. Enregistrer la mesure en base de données liée à cette station
       const measure = await this.prisma.measure.create({
@@ -63,7 +75,7 @@ export class TelemetryController {
       // Si la station est déjà marquée comme sous MAINTENANCE, on conserve ce statut
       let nextStatus = station.status;
       if (station.status !== 'MAINTENANCE') {
-        const isBatteryLow = dto.battery_voltage != null && parseFloat(dto.battery_voltage.toString()) < 3.4;
+        const isBatteryLow = dto.battery_voltage != null && parseFloat(dto.battery_voltage.toString()) < batteryThresholdCritical;
         const isBmpMissing = dto.temperature_bmp == null;
         const isDhtMissing = dto.temperature_dht == null;
 
@@ -84,12 +96,12 @@ export class TelemetryController {
 
       // 3. Moteur d'Alertes automatique
       // A. Alertes techniques
-      if (dto.battery_voltage != null && parseFloat(dto.battery_voltage.toString()) < 3.4) {
+      if (dto.battery_voltage != null && parseFloat(dto.battery_voltage.toString()) < batteryThresholdCritical) {
         await this.alertsService.triggerAlert(
           station.id,
           'TECHNICAL',
           'Batterie faible',
-          `La tension de la batterie est de ${dto.battery_voltage} V (seuil critique : < 3.4 V).`,
+          `La tension de la batterie est de ${dto.battery_voltage} V (seuil critique : < ${batteryThresholdCritical} V).`,
           'CRITICAL',
         );
       }
@@ -125,12 +137,12 @@ export class TelemetryController {
         );
       }
 
-      if (dto.temperature > 40) {
+      if (dto.temperature > tempThresholdCritical) {
         await this.alertsService.triggerAlert(
           station.id,
           'ENVIRONMENTAL',
           'Canicule critique',
-          `La température a dépassé les 40 °C (actuelle : ${dto.temperature} °C). Risque sanitaire.`,
+          `La température a dépassé les ${tempThresholdCritical} °C (actuelle : ${dto.temperature} °C). Risque sanitaire.`,
           'CRITICAL',
         );
       }

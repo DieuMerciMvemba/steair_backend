@@ -57,7 +57,7 @@ export class StationsService {
     });
   }
 
-  async update(id: string, data: { name?: string; location?: string; latitude?: number; longitude?: number; status?: string }) {
+  async update(id: string, data: { name?: string; location?: string; latitude?: number; longitude?: number; status?: string; active?: boolean }) {
     const station = await this.prisma.station.findUnique({
       where: { id },
     });

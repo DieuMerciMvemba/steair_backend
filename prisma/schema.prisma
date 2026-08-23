@@ -1,6 +1,7 @@
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 generator client {
@@ -26,6 +27,7 @@ model Station {
   latitude     Float?
   longitude    Float?
   status       String        @default("OFFLINE") // "ONLINE" | "DEGRADED" | "OFFLINE" | "MAINTENANCE"
+  active       Boolean       @default(true)      // permet de désactiver la station
   apiKey       String        @unique // clé d'authentification propre au boîtier
   lastSeen     DateTime?
   createdAt    DateTime      @default(now())
@@ -81,4 +83,17 @@ model Maintenance {
 
   stationId      String
   station        Station  @relation(fields: [stationId], references: [id], onDelete: Cascade)
+}
+
+model Setting {
+  key   String @id // ex: "temp_threshold_critical_high", "retention_days"
+  value String
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String   // ex: "CREATE_USER", "UPDATE_THRESHOLD"
+  details   String
+  userEmail String?
+  createdAt DateTime @default(now())
 }

@@ -8,6 +8,9 @@ import { ExportModule } from './export/export.module';
 import { StationsModule } from './stations/stations.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
+import { SettingsModule } from './settings/settings.module';
+import { AuditModule } from './audit/audit.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -20,6 +23,9 @@ import { MaintenanceModule } from './maintenance/maintenance.module';
     StationsModule,
     AlertsModule,
     MaintenanceModule,
+    SettingsModule,
+    AuditModule,
+    UsersModule,
   ],
 })
 export class AppModule {}
