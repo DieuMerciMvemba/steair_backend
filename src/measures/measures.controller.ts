@@ -16,7 +16,7 @@ export class MeasuresController {
       orderBy: { timestamp: 'desc' },
     });
     if (!measure) {
-      throw new NotFoundException('Aucune mesure disponible');
+      return null;
     }
     return measure;
   }
