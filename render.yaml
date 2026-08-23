@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: steair-backend
+    runtime: node
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm run start:prod
+    envVars:
+      - key: DATABASE_URL
+        sync: false # L'utilisateur saisira sa chaîne de connexion Supabase dans le tableau de bord Render
+      - key: ADMIN_API_KEY
+        value: steair_admin_super_secret_key_2026
+      - key: PORT
+        value: 3000
