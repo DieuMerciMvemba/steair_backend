@@ -50,7 +50,7 @@ export class TelemetryController {
       const tempThresholdCritical = tempThresholdCriticalStr ? parseFloat(tempThresholdCriticalStr.value) : 40.0;
       const batteryThresholdCritical = batteryThresholdCriticalStr ? parseFloat(batteryThresholdCriticalStr.value) : 3.4;
 
-      const isAlert = dto.rain === 1 || dto.temperature > tempThresholdCritical || (dto.battery_voltage != null && dto.battery_voltage < batteryThresholdCritical);
+      const isAlert = dto.temperature > tempThresholdCritical || (dto.battery_voltage != null && dto.battery_voltage < batteryThresholdCritical);
 
       // 1. Enregistrer la mesure en base de données liée à cette station
       const measure = await this.prisma.measure.create({
