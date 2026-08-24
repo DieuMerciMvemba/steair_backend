@@ -56,8 +56,12 @@ export class MeasuresController {
 
     if (start || end) {
       where.timestamp = {};
-      if (start) where.timestamp.gte = new Date(start);
-      if (end) where.timestamp.lte = new Date(end);
+      if (start) {
+        where.timestamp.gte = start.includes('T') ? new Date(start) : new Date(`${start}T00:00:00.000Z`);
+      }
+      if (end) {
+        where.timestamp.lte = end.includes('T') ? new Date(end) : new Date(`${end}T23:59:59.999Z`);
+      }
     }
 
     if (minTemp !== undefined || maxTemp !== undefined) {
