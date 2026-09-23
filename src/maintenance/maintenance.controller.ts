@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, UseGuards } from '@nestjs/common';
 import { MaintenanceService } from './maintenance.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -17,8 +17,17 @@ export class MaintenanceController {
 
   @Post()
   async create(
-    @Body() body: { stationId: string; technicianName: string; description: string; action: string; result: string; status: string },
+    @Body() body: { stationId: string; technicianName?: string; description: string; action?: string; result?: string; status?: string; title?: string; priority?: string },
   ) {
     return this.maintenanceService.create(body);
   }
+
+  @Put(':id/status')
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() body: { status: string; result?: string },
+  ) {
+    return this.maintenanceService.updateStatus(id, body.status, body.result);
+  }
 }
+

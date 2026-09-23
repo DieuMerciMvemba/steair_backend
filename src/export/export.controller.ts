@@ -26,6 +26,8 @@ export class ExportController {
       heure: dt.toTimeString().slice(0, 8),
       jour_semaine: ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'][dt.getDay()],
       temperature_c: row.temperature,
+      temperature_bmp: row.temperatureBmp ?? null,
+      temperature_dht: row.temperatureDht ?? null,
       humidite_pct: row.humidity,
       pression_hpa: row.pressure ?? null,
       pluie: row.rain === 1 ? 1 : 0,
@@ -67,6 +69,8 @@ export class ExportController {
       const rows = raw.map((r) => this.enrichRow(r));
 
       const tempStats = this.calcStats(rows, 'temperature_c');
+      const tempBmpStats = this.calcStats(rows, 'temperature_bmp');
+      const tempDhtStats = this.calcStats(rows, 'temperature_dht');
       const humStats = this.calcStats(rows, 'humidite_pct');
       const presStats = this.calcStats(rows, 'pression_hpa');
 
@@ -80,6 +84,8 @@ export class ExportController {
         },
         statistics: {
           temperature_c: tempStats,
+          temperature_bmp: tempBmpStats,
+          temperature_dht: tempDhtStats,
           humidite_pct: humStats,
           pression_hpa: presStats,
           alertes_count: rows.filter((r) => r.alerte_active).length,
@@ -124,6 +130,8 @@ export class ExportController {
         Heure: r.heure,
         Jour: r.jour_semaine,
         'Température (°C)': r.temperature_c,
+        'Temp. BMP280 (°C)': r.temperature_bmp,
+        'Temp. DHT11 (°C)': r.temperature_dht,
         'Humidité (%)': r.humidite_pct,
         'Pression (hPa)': r.pression_hpa,
         'Pluie (0/1)': r.pluie,
@@ -134,12 +142,14 @@ export class ExportController {
       const wsData = XLSX.utils.json_to_sheet(sheetData);
       wsData['!cols'] = [
         { wch: 36 }, { wch: 22 }, { wch: 12 }, { wch: 10 }, { wch: 12 },
-        { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 8 }, { wch: 16 },
+        { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 8 }, { wch: 16 },
       ];
 
       // ── Onglet 2 : Statistiques descriptives ─────────────────────────────────
       const statRows = [
         { Métrique: 'Température (°C)', ...this.calcStats(rows, 'temperature_c') },
+        { Métrique: 'Temp. BMP280 (°C)', ...this.calcStats(rows, 'temperature_bmp') },
+        { Métrique: 'Temp. DHT11 (°C)', ...this.calcStats(rows, 'temperature_dht') },
         { Métrique: 'Humidité (%)', ...this.calcStats(rows, 'humidite_pct') },
         { Métrique: 'Pression (hPa)', ...this.calcStats(rows, 'pression_hpa') },
       ];

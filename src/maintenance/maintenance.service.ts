@@ -20,7 +20,7 @@ export class MaintenanceService {
     });
   }
 
-  async create(data: { stationId: string; technicianName: string; description: string; action: string; result: string; status: string }) {
+  async create(data: { stationId: string; technicianName?: string; description: string; action?: string; result?: string; status?: string; title?: string; priority?: string }) {
     const station = await this.prisma.station.findUnique({
       where: { id: data.stationId },
     });
@@ -29,27 +29,60 @@ export class MaintenanceService {
       throw new NotFoundException(`Station avec l'ID ${data.stationId} non trouvée`);
     }
 
-    // Si le technicien a résolu l'incident et que la station était marquée "MAINTENANCE"
-    // on peut remettre son statut à ONLINE par défaut, ou selon le statut de la fiche
-    const newStatus = data.status === 'RESOLVED' ? 'ONLINE' : 'MAINTENANCE';
+    const status = data.status || 'PENDING';
+    const newStationStatus = status === 'RESOLVED' ? 'ONLINE' : 'MAINTENANCE';
+
+    const technicianName = data.technicianName || 'Technicien SteAir';
+    const description = data.title ? `${data.title} - ${data.description}` : data.description;
+    const action = data.action || 'Intervention enregistrée';
+    const result = data.result || (status === 'RESOLVED' ? 'Incident résolu' : 'En cours');
 
     const [maintenanceRecord] = await this.prisma.$transaction([
       this.prisma.maintenance.create({
         data: {
           stationId: data.stationId,
-          technicianName: data.technicianName,
-          description: data.description,
-          action: data.action,
-          result: data.result,
-          status: data.status,
+          technicianName,
+          description,
+          action,
+          result,
+          status,
         },
       }),
       this.prisma.station.update({
         where: { id: data.stationId },
-        data: { status: newStatus },
+        data: { status: newStationStatus },
       }),
     ]);
 
     return maintenanceRecord;
   }
+
+  async updateStatus(id: string, status: string, result?: string) {
+    const ticket = await this.prisma.maintenance.findUnique({
+      where: { id },
+    });
+
+    if (!ticket) {
+      throw new NotFoundException(`Ticket de maintenance avec l'ID ${id} non trouvé`);
+    }
+
+    const newStationStatus = status === 'RESOLVED' ? 'ONLINE' : 'MAINTENANCE';
+
+    const [updatedTicket] = await this.prisma.$transaction([
+      this.prisma.maintenance.update({
+        where: { id },
+        data: {
+          status,
+          result: result || (status === 'RESOLVED' ? 'Intervention terminée avec succès' : ticket.result),
+        },
+      }),
+      this.prisma.station.update({
+        where: { id: ticket.stationId },
+        data: { status: newStationStatus },
+      }),
+    ]);
+
+    return updatedTicket;
+  }
 }
+
