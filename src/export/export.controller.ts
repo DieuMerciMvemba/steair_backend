@@ -52,8 +52,13 @@ export class ExportController {
   }
 
   @Get('json')
-  async exportJson(@Res() res: Response, @Query('stationId') stationId?: string) {
+  async exportJson(
+    @Res() res: Response,
+    @Query('stationId') stationId?: string,
+    @Query('filterParasites') filterParasitesQuery?: string,
+  ) {
     try {
+      const filterParasites = filterParasitesQuery === 'true' || filterParasitesQuery === '1';
       const where: any = {};
       if (stationId) {
         if (stationId.includes(',')) {
@@ -66,7 +71,17 @@ export class ExportController {
         where,
         orderBy: { timestamp: 'desc' },
       });
-      const rows = raw.map((r) => this.enrichRow(r));
+      
+      let rows = raw.map((r) => this.enrichRow(r));
+      
+      if (filterParasites) {
+        rows = rows.filter((r) => {
+          const badPress = r.pression_hpa !== null && r.pression_hpa < 800;
+          const badTempBmp = r.temperature_bmp !== null && Math.abs(r.temperature_bmp - 22.23) < 0.01;
+          const badHum = r.humidite_pct === 0;
+          return !(badPress || badTempBmp || badHum);
+        });
+      }
 
       const tempStats = this.calcStats(rows, 'temperature_c');
       const tempBmpStats = this.calcStats(rows, 'temperature_bmp');
@@ -78,6 +93,7 @@ export class ExportController {
         meta: {
           exported_at: new Date().toISOString(),
           total_records: rows.length,
+          filter_parasites_applied: filterParasites,
           period_start: rows.length ? rows[rows.length - 1].timestamp_iso : null,
           period_end: rows.length ? rows[0].timestamp_iso : null,
           source: 'SteAir Pro — Station Météo NestJS',
@@ -85,7 +101,7 @@ export class ExportController {
         statistics: {
           temperature_c: tempStats,
           temperature_bmp: tempBmpStats,
-          temperature_dht: tempDhtStats,
+          temperature_dht22: tempDhtStats,
           humidite_pct: humStats,
           pression_hpa: presStats,
           alertes_count: rows.filter((r) => r.alerte_active).length,
@@ -106,8 +122,13 @@ export class ExportController {
   }
 
   @Get('excel')
-  async exportExcel(@Res() res: Response, @Query('stationId') stationId?: string) {
+  async exportExcel(
+    @Res() res: Response,
+    @Query('stationId') stationId?: string,
+    @Query('filterParasites') filterParasitesQuery?: string,
+  ) {
     try {
+      const filterParasites = filterParasitesQuery === 'true' || filterParasitesQuery === '1';
       const where: any = {};
       if (stationId) {
         if (stationId.includes(',')) {
@@ -120,7 +141,16 @@ export class ExportController {
         where,
         orderBy: { timestamp: 'desc' },
       });
-      const rows = raw.map((r) => this.enrichRow(r));
+
+      let rows = raw.map((r) => this.enrichRow(r));
+      if (filterParasites) {
+        rows = rows.filter((r) => {
+          const badPress = r.pression_hpa !== null && r.pression_hpa < 800;
+          const badTempBmp = r.temperature_bmp !== null && Math.abs(r.temperature_bmp - 22.23) < 0.01;
+          const badHum = r.humidite_pct === 0;
+          return !(badPress || badTempBmp || badHum);
+        });
+      }
 
       // ── Onglet 1 : Données brutes enrichies ──────────────────────────────────
       const sheetData = rows.map((r) => ({
@@ -131,7 +161,7 @@ export class ExportController {
         Jour: r.jour_semaine,
         'Température (°C)': r.temperature_c,
         'Temp. BMP280 (°C)': r.temperature_bmp,
-        'Temp. DHT11 (°C)': r.temperature_dht,
+        'Temp. DHT22 (°C)': r.temperature_dht,
         'Humidité (%)': r.humidite_pct,
         'Pression (hPa)': r.pression_hpa,
         'Pluie (0/1)': r.pluie,
@@ -149,7 +179,7 @@ export class ExportController {
       const statRows = [
         { Métrique: 'Température (°C)', ...this.calcStats(rows, 'temperature_c') },
         { Métrique: 'Temp. BMP280 (°C)', ...this.calcStats(rows, 'temperature_bmp') },
-        { Métrique: 'Temp. DHT11 (°C)', ...this.calcStats(rows, 'temperature_dht') },
+        { Métrique: 'Temp. DHT22 (°C)', ...this.calcStats(rows, 'temperature_dht') },
         { Métrique: 'Humidité (%)', ...this.calcStats(rows, 'humidite_pct') },
         { Métrique: 'Pression (hPa)', ...this.calcStats(rows, 'pression_hpa') },
       ];
